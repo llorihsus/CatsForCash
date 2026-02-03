@@ -6,8 +6,8 @@ public class Driver : MonoBehaviour
 {
     // class-level variables
     [Header("Movement Settings")]
-    public float currentSpeed = 5f; // Visible in Inspector
-    private float steerSpeed = 200f; // Hidden in Inspector, private is default when no access modifier is specified
+    public float currentSpeed = 7f; // Visible in Inspector
+    private float steerSpeed = 300f; // Hidden in Inspector, private is default when no access modifier is specified
     [SerializeField] float rotationSpeed = 50f;
     [SerializeField] float regularSpeed = 5f;
     [SerializeField] float slowSpeed = 2f;
@@ -16,6 +16,7 @@ public class Driver : MonoBehaviour
     [SerializeField] int numberOfDeliveries = 0; // [SerializeField] makes private variables visible in Inspector while keeping them private in code
     [SerializeField] bool hasPackage = false; //Use [SerializeField] for values you want to adjust in the Inspector while keeping proper encapsulation.
 
+    // Collision Test
     void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.name == "Wall")
@@ -27,6 +28,17 @@ public class Driver : MonoBehaviour
         {
             Debug.Log("Hit a rock!");
             currentSpeed = slowSpeed; // Slow down when hitting a rock
+        }
+    }
+
+    //Trigger Test
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.gameObject.name == "Package")
+        {
+            Debug.Log("Picked up package!");
+            Destroy(collision.gameObject);
+            currentSpeed = regularSpeed; // Restore speed after picking up package
         }
     }
 
