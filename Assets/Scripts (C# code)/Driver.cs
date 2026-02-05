@@ -29,6 +29,15 @@ public class Driver : MonoBehaviour
             Debug.Log("Hit a rock!");
             currentSpeed = slowSpeed; // Slow down when hitting a rock
         }
+
+       /* if (collision.collider.CompareTag("WorldCollision"))
+        {
+            currentSpeed = regularSpeed;
+            boostText.gameObject.setActive(false);
+        Challenge:
+         Arraylist of hte packages and showing the path to the requester 
+
+        } */
     }
 
     //Trigger Test
@@ -40,6 +49,13 @@ public class Driver : MonoBehaviour
             Destroy(collision.gameObject);
             currentSpeed = regularSpeed; // Restore speed after picking up package
         }
+
+        /* if (collision.CompareTag("Boost"))
+        {
+            currentSpeed = boostSpeed;
+            boostText.gameObject.SetActive(true);
+            Destroy(collision.gameObject);
+        } */
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
