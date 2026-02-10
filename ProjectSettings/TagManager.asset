@@ -48,6 +48,9 @@ TagManager:
   - name: Props
     uniqueID: 2791513069
     locked: 0
+  - name: Colliders
+    uniqueID: 3141626493
+    locked: 0
   - name: Actors
     uniqueID: 4235472311
     locked: 0
