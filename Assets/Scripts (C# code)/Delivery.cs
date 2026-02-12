@@ -13,7 +13,7 @@ public class Delivery : MonoBehaviour
         packageParticles = GetComponent<ParticleSystem>();
     }
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    void OnTriggerEnter2D(Collider2D collision)
     {
         // Pick up package
         if (collision.CompareTag("Package") && !hasPackage)
@@ -31,9 +31,12 @@ public class Delivery : MonoBehaviour
 
             Destroy(collision.gameObject);
         }
+    }
 
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
         // Deliver to house
-        if (collision.CompareTag("Delivery") && hasPackage)
+        if (collision.collider.CompareTag("Delivery") && hasPackage)
         {
             Debug.Log("Delivered package!");
             hasPackage = false;

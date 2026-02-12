@@ -46,6 +46,7 @@ public class Driver : MonoBehaviour
     {
         // Slow down
         float originalSpeed = currentSpeed;
+        currentSpeed = slowSpeed;
 
         Vector2 away = collision.GetContact(0).normal;
         float distance = 0.2f;
@@ -62,7 +63,7 @@ public class Driver : MonoBehaviour
             yield return new WaitForFixedUpdate();
         }
 
-        yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(1f);
         currentSpeed = originalSpeed;
     }
 
