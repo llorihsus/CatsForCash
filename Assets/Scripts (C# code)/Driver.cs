@@ -33,9 +33,8 @@ public class Driver : MonoBehaviour
         {
             StartCoroutine(BumpEffect());
         }
-        //boostText.gameObject.setActive(false);
-        
     }
+
     IEnumerator BumpEffect()
     {
         // Save original speed
