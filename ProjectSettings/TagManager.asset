@@ -4,10 +4,12 @@
 TagManager:
   serializedVersion: 3
   tags:
-  - booster
-  - ' Package'
   - Delivery
-  - Obstacle
+  - Collider
+  - Trigger
+  - Package
+  - RareBoost
+  - CommonBoost
   layers:
   - Default
   - TransparentFX
