@@ -9,7 +9,7 @@ public class Driver : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField] float currentSpeed = 1f; // Visible in Inspector
     [SerializeField] float regularSpeed = 1f;
-    [SerializeField] float slowSpeed = 0.5f;
+    [SerializeField] float slowSpeed = 0.7f;
     [SerializeField] float steerSpeed = 25f;
 
     [Header("Counters")]
@@ -20,67 +20,88 @@ public class Driver : MonoBehaviour
     private float move = 0f;
     private float steer = 0f;
 
+    // Efficient - Get once, store, reuse
+    SpriteRenderer sr;
+    Color originalColor;
+
     // Get Rigidbody2D component
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        sr = GetComponent<SpriteRenderer>();
+        originalColor = sr.color;
     }
 
     // Collision Test
     void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.collider.CompareTag("Collision"))
+        if (collision.collider.CompareTag("Collider"))
         {
-            StartCoroutine(BumpEffect());
+            StartCoroutine(BumpEffect(collision));
+            StartCoroutine(FlashRed());
         }
     }
 
-    IEnumerator BumpEffect()
+    IEnumerator BumpEffect(Collision2D collision)
     {
-        // Save original speed
+        // Slow down
         float originalSpeed = currentSpeed;
 
-        // Slow down
-        currentSpeed = slowSpeed;
+        Vector2 away = collision.GetContact(0).normal;
+        float distance = 0.2f;
+        float time = 0.08f;
 
-        // Optional: small bump backward
-        rb.MovePosition(rb.position - (Vector2)transform.right * 0.2f);
+        float moved = 0f;
+        float speed = distance / time;
 
-        // Wait 1 second
-        yield return new WaitForSeconds(1f);
+        while (moved < distance)
+        {
+            float step = speed * Time.fixedDeltaTime;
+            rb.MovePosition(rb.position + away * step);
+            moved += step;
+            yield return new WaitForFixedUpdate();
+        }
 
-        // Restore speed
+        yield return new WaitForSeconds(0.2f);
         currentSpeed = originalSpeed;
     }
 
+    IEnumerator FlashRed()
+    {
+        sr.color = Color.red; // Change color of player temporarily
+        yield return new WaitForSeconds(0.5f);
+        sr.color = originalColor;
+    }
 
     //Trigger Test
     void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.CompareTag("Package"))
+        if (collision != null && collision.gameObject != null) // safety check
         {
-            Debug.Log("Picked up package!");
-            Destroy(collision.gameObject);
-            currentSpeed = regularSpeed; // Restore speed after picking up package
-        }
+            if (collision.CompareTag("Package") && !hasPackage)
+            {
+                hasPackage = true;
+                currentSpeed = regularSpeed; // Restore speed after picking up package
+            }
 
-        if (collision.CompareTag("RareBoost"))
-        {
-            //increase timer + 5s
-            //boostText.gameObject.SetActive(true);
-            Destroy(collision.gameObject);
-        } 
-        
-        if (collision.CompareTag("CommonBoost"))
-        {
-            //increase timer + 10s
-            //boostText.gameObject.SetActive(true);
-            Destroy(collision.gameObject);
-        }
+            if (collision.CompareTag("RareBoost"))
+            {
+                //increase timer + 5s
+                //boostText.gameObject.SetActive(true);
+                Destroy(collision.gameObject);
+            }
 
-        if (collision.CompareTag("Trigger"))
-        {
-            currentSpeed = slowSpeed;
+            if (collision.CompareTag("CommonBoost"))
+            {
+                //increase timer + 10s
+                //boostText.gameObject.SetActive(true);
+                Destroy(collision.gameObject);
+            }
+
+            if (collision.CompareTag("Trigger"))
+            {
+                currentSpeed = slowSpeed; //slow speed while crossing object
+            }
         }
     }
 
@@ -145,11 +166,11 @@ public class Driver : MonoBehaviour
         Vector2 forward = transform.right;
 
         // Use MovePosition instead of transform.Translate
-        Vector2 newPos = rb.position + forward * (move * currentSpeed * Time.deltaTime);
+        Vector2 newPos = rb.position + forward * (move * currentSpeed * Time.fixedDeltaTime);
         rb.MovePosition(newPos);
 
         // Use MoveRotation instead of transform.Rotate
-        float newRot = rb.rotation + (steer * steerSpeed * Time.deltaTime);
+        float newRot = rb.rotation + (steer * steerSpeed * Time.fixedDeltaTime);
         rb.MoveRotation(newRot);
     }
 
