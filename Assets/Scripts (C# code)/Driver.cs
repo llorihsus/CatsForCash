@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem; // Handles player input from keyboard, mouse, gamepad, etc.
 using System.Collections; // For using IEnumerator and Coroutines
-using TMPro; // TextMeshPro namespace for advanced text rendering
 
 // Current Challenges:
 //   List<GameObject> -> keep track of packages and the index (customer who requrested that package)
@@ -16,21 +15,21 @@ public class Driver : MonoBehaviour
     // class-level variables
     [Header("Movement Settings")]
     [SerializeField] float currentSpeed = 1f; // Visible in Inspector
-    [SerializeField] float regularSpeed = 1f;
+    [SerializeField] float regularSpeed = 1f; //Use [SerializeField] for values you want to adjust in the Inspector while keeping proper encapsulation.
     [SerializeField] float slowSpeed = 0.7f;
     [SerializeField] float steerSpeed = 25f;
-
-    [Header("Trackers")]
-    [SerializeField] bool hasPackage = false; //Use [SerializeField] for values you want to adjust in the Inspector while keeping proper encapsulation.
-
-    ParticleSystem playerParticles;
-    private Rigidbody2D rb;
-    private float move = 0f;
-    private float steer = 0f;
+    [SerializeField] float move = 0f;
+    [SerializeField] float steer = 0f;
 
     // Efficient - Get once, store, reuse
-    SpriteRenderer sr;
-    Color originalColor;
+    [Header("Components")]
+    [SerializeField] ParticleSystem playerParticles;
+    [SerializeField] Rigidbody2D rb;
+    [SerializeField] SpriteRenderer sr;
+    [SerializeField] Color originalColor;
+
+    [Header("Reference")]
+    [SerializeField] Delivery delivery;
 
     // Get Rigidbody2D component
     void Awake()
@@ -47,6 +46,86 @@ public class Driver : MonoBehaviour
         Debug.Log("Game has Started!");
         playerParticles = GetComponent<ParticleSystem>();
         playerParticles.Play();
+    }
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.collider.CompareTag("Collider"))
+        {
+            StartCoroutine(BumpEffect(collision));
+            StartCoroutine(FlashRed());
+        }
+    }
+
+    IEnumerator BumpEffect(Collision2D collision)
+    {
+        // Slow down
+        float originalSpeed = currentSpeed;
+        currentSpeed = slowSpeed;
+
+        Vector2 away = collision.GetContact(0).normal;
+        float distance = 0.2f;
+        float time = 0.08f;
+
+        float moved = 0f;
+        float speed = distance / time;
+
+        while (moved < distance)
+        {
+            float step = speed * Time.fixedDeltaTime;
+            rb.MovePosition(rb.position + away * step);
+            moved += step;
+            yield return new WaitForFixedUpdate();
+        }
+
+        yield return new WaitForSeconds(1f);
+        currentSpeed = originalSpeed;
+    }
+
+    IEnumerator FlashRed()
+    {
+        sr.color = Color.red; // Change color of player temporarily
+        yield return new WaitForSeconds(0.5f);
+        sr.color = originalColor;
+    }
+
+
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision != null && collision.gameObject != null) // safety check
+        {
+            if (collision.CompareTag("Package") && !delivery.hasPackage)
+            {
+                currentSpeed = regularSpeed; // Restore speed after picking up package
+            }
+
+            if (delivery.hasPackage) {
+                if (collision.CompareTag("RareBoost"))
+                {
+                    delivery.AddTime(10f); // adds 10 seconds to timer
+                    Destroy(collision.gameObject);
+                }
+
+                if (collision.CompareTag("CommonBoost"))
+                {
+                    delivery.AddTime(5f); // adds 5 seconds to timer
+                    Destroy(collision.gameObject);
+                }
+            }
+
+            if (collision.CompareTag("Trigger"))
+            {
+                currentSpeed = slowSpeed; //slow speed while crossing object
+            }
+        }
+    }
+
+    void OnTriggerExit2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Trigger"))
+        {
+            currentSpeed = regularSpeed; //return speed to normal
+        }
     }
 
     // Update is called once per frame (60+ times per second)
@@ -101,86 +180,5 @@ public class Driver : MonoBehaviour
         // Use MoveRotation instead of transform.Rotate
         float newRot = rb.rotation + (steer * steerSpeed * Time.fixedDeltaTime);
         rb.MoveRotation(newRot);
-    }
-
-    void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (collision.collider.CompareTag("Collider"))
-        {
-            StartCoroutine(BumpEffect(collision));
-            StartCoroutine(FlashRed());
-        }
-    }
-
-    IEnumerator BumpEffect(Collision2D collision)
-    {
-        // Slow down
-        float originalSpeed = currentSpeed;
-        currentSpeed = slowSpeed;
-
-        Vector2 away = collision.GetContact(0).normal;
-        float distance = 0.2f;
-        float time = 0.08f;
-
-        float moved = 0f;
-        float speed = distance / time;
-
-        while (moved < distance)
-        {
-            float step = speed * Time.fixedDeltaTime;
-            rb.MovePosition(rb.position + away * step);
-            moved += step;
-            yield return new WaitForFixedUpdate();
-        }
-
-        yield return new WaitForSeconds(1f);
-        currentSpeed = originalSpeed;
-    }
-
-    IEnumerator FlashRed()
-    {
-        sr.color = Color.red; // Change color of player temporarily
-        yield return new WaitForSeconds(0.5f);
-        sr.color = originalColor;
-    }
-
-
-    void OnTriggerEnter2D(Collider2D collision)
-    {
-        if (collision != null && collision.gameObject != null) // safety check
-        {
-            if (collision.CompareTag("Package") && !hasPackage)
-            {
-                hasPackage = true;
-                currentSpeed = regularSpeed; // Restore speed after picking up package
-            }
-
-            if (collision.CompareTag("RareBoost"))
-            {
-                //increase timer + 5s
-                //boostText.gameObject.SetActive(true);
-                Destroy(collision.gameObject);
-            }
-
-            if (collision.CompareTag("CommonBoost"))
-            {
-                //increase timer + 10s
-                //boostText.gameObject.SetActive(true);
-                Destroy(collision.gameObject);
-            }
-
-            if (collision.CompareTag("Trigger"))
-            {
-                currentSpeed = slowSpeed; //slow speed while crossing object
-            }
-        }
-    }
-
-    void OnTriggerExit2D(Collider2D collision)
-    {
-        if (collision.CompareTag("Trigger"))
-        {
-            currentSpeed = regularSpeed; //return speed to normal
-        }
     }
 }
