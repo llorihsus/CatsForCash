@@ -1,12 +1,12 @@
 using UnityEngine;
 
-public class HouseData : MonoBehaviour
+public class CatData : MonoBehaviour
 {
-    public Sprite addressOfSprite;
+    public Sprite CatInBike;
 
     void Start()
     {
-    
+        
     }
     void Update()
     {

@@ -14,8 +14,8 @@ public class Driver : MonoBehaviour
 {
     // class-level variables
     [Header("Movement Settings")]
-    [SerializeField] float currentSpeed = 1f; // Visible in Inspector
-    [SerializeField] float regularSpeed = 1f; //Use [SerializeField] for values you want to adjust in the Inspector while keeping proper encapsulation.
+    [SerializeField] float currentSpeed = 7f; // Visible in Inspector
+    [SerializeField] float regularSpeed = 7f; //Use [SerializeField] for values you want to adjust in the Inspector while keeping proper encapsulation.
     [SerializeField] float slowSpeed = 0.7f;
     [SerializeField] float steerSpeed = 25f;
     [SerializeField] float move = 0f;

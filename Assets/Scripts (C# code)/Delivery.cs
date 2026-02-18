@@ -21,10 +21,15 @@ public class Delivery : MonoBehaviour
     [SerializeField] TMP_Text Countdown;
     [SerializeField] TMP_Text SmallTimerIncrease;
     [SerializeField] TMP_Text BigTimerIncrease;
+    [SerializeField] Image Money;
+    [SerializeField] TMP_Text MoneyCount;
     [SerializeField] TMP_Text DeliveriesText;
     [SerializeField] TMP_Text DeliveryCount;
     [SerializeField] Image addressOfHouse;
-   
+
+    [SerializeField] SpriteRenderer sr;
+    [SerializeField] Sprite originalBiker;
+
     //Lists for Package-Delivery pairs
     [SerializeField] List<GameObject> packages;
     [SerializeField] List<GameObject> houseDelivery;
@@ -52,10 +57,14 @@ public class Delivery : MonoBehaviour
         Countdown.gameObject.SetActive(false);
         SmallTimerIncrease.gameObject.SetActive(false);  // Hide at start
         BigTimerIncrease.gameObject.SetActive(false);  // Hide at start
+        Money.gameObject.SetActive(true);
+        MoneyCount.gameObject.SetActive(true);
         DeliveriesText.gameObject.SetActive(true);
         DeliveryCount.gameObject.SetActive(true);
         addressOfHouse.gameObject.SetActive(false);
         ShuffleHouses();
+        sr = GetComponent<SpriteRenderer>();
+        originalBiker = sr.sprite;
     }
 
     void OnTriggerEnter2D(Collider2D collision)
@@ -82,16 +91,17 @@ public class Delivery : MonoBehaviour
             if (addressOfHouse == null) 
                 Debug.LogError("addressOfHouse not assigned!");
 
-            var house = houseDelivery[currentTargetIndex];
-            var data = houseDelivery[currentTargetIndex].GetComponent<HouseData>();
+            var houseData = houseDelivery[currentTargetIndex].GetComponent<HouseData>();
+            var catData = packages[currentTargetIndex].GetComponent<CatData>();
 
-            if (data == null) 
-                Debug.LogError("HouseData missing on " + house.name);
-            if (data.addressOfSprite == null)
-                Debug.LogError("addressOfSprite not set on " + house.name);
-        
+            if (houseData == null) 
+                Debug.LogError("HouseData missing on " + houseData.name);
+            if (houseData.addressOfSprite == null)
+                Debug.LogError("addressOfSprite not set on " + houseData.name);
 
-            addressOfHouse.sprite = data.addressOfSprite;
+            sr.sprite = catData.CatInBike; // Change sprite to cat in bike when package is picked up
+            addressOfHouse.sprite = houseData.addressOfSprite;
+            
             Destroy(collision.gameObject);
             addressOfHouse.gameObject.SetActive(true);
             Countdown.gameObject.SetActive(true);
@@ -118,6 +128,8 @@ public class Delivery : MonoBehaviour
 
                 // Stop particle effect
                 // packageParticles.Stop();
+
+                sr.sprite = originalBiker; // Change sprite back to original biker after delivery
             } else
             {
                 Debug.Log("Wrong house!");
