@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem; // Handles player input from keyboard, mouse, gamepad, etc.
-using System.Collections; // For using IEnumerator and Coroutines
+using System.Collections;
+using UnityEngine.SceneManagement; // For using IEnumerator and Coroutines
 
 // Current Challenges:
 //   List<GameObject> -> keep track of packages and the index (customer who requrested that package)
@@ -59,8 +60,6 @@ public class Driver : MonoBehaviour
 
     IEnumerator BumpEffect(Collision2D collision)
     {
-        // Slow down
-        float originalSpeed = currentSpeed;
         currentSpeed = slowSpeed;
 
         Vector2 away = collision.GetContact(0).normal;
@@ -79,7 +78,7 @@ public class Driver : MonoBehaviour
         }
 
         yield return new WaitForSeconds(1f);
-        currentSpeed = originalSpeed;
+        currentSpeed = regularSpeed;
     }
 
     IEnumerator FlashRed()
@@ -156,12 +155,12 @@ public class Driver : MonoBehaviour
             steer = -0.75f;
         }
 
-        /* Apply movement
-        float moveAmount = move * currentSpeed * Time.deltaTime; // Time.deltaTime makes movement frame rate independent
-        float steerAmount = steer * steerSpeed * Time.deltaTime; // Speed is now units per second rather than units pers frame
+        // Resets the game
+        if (Keyboard.current.rKey.isPressed)
+        {
+            SceneManager.LoadScene("Main");
+        }
 
-        transform.Translate(moveAmount, 0, 0);
-        transform.Rotate(0, 0, steerAmount); */
 
     }
     void FixedUpdate()

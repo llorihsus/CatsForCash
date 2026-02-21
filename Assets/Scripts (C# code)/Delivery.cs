@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro; // TextMeshPro namespace for advanced text rendering
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Tilemaps;
 
 public class Delivery : MonoBehaviour
 {
@@ -12,9 +13,9 @@ public class Delivery : MonoBehaviour
     [SerializeField] float timeLeft = 0f;
 
     [Header("Delivery Tracking")]
-    [SerializeField] int numberOfDeliveries = 0; // [SerializeField] makes private variables visible in Inspector while keeping them private in code
-    [SerializeField] int deliveries = 0; // restart every time we start the game
+    [SerializeField] int deliveries = 0; // [SerializeField] makes private variables visible in Inspector while keeping them private in code
     [SerializeField] int money = 0;
+    [SerializeField] int LostCats = 0;
 
     [Header("UI")]
     [SerializeField] TMP_Text TimerText;
@@ -26,6 +27,16 @@ public class Delivery : MonoBehaviour
     [SerializeField] TMP_Text DeliveriesText;
     [SerializeField] TMP_Text DeliveryCount;
     [SerializeField] Image addressOfHouse;
+    [SerializeField] TMP_Text GameStatus;
+
+    [Header("Pathfinding")]
+    [SerializeField] Tilemap roadTilemap;
+    [SerializeField] Tilemap houseTilemap;
+    private Vector3Int startCell;
+    private Vector3Int goalCell;
+    private List<Vector3Int> pathCells;
+    [SerializeField] private LineRenderer lineRenderer;
+
 
     [SerializeField] SpriteRenderer sr;
     [SerializeField] Sprite originalBiker;
@@ -51,6 +62,7 @@ public class Delivery : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        Time.timeScale = 1f;
         if (packages.Count != houseDelivery.Count)
             Debug.Log("Mistmatched number of package to houses!");
         TimerText.gameObject.SetActive(true);
@@ -62,6 +74,7 @@ public class Delivery : MonoBehaviour
         DeliveriesText.gameObject.SetActive(true);
         DeliveryCount.gameObject.SetActive(true);
         addressOfHouse.gameObject.SetActive(false);
+        GameStatus.gameObject.SetActive(false);
         ShuffleHouses();
         sr = GetComponent<SpriteRenderer>();
         originalBiker = sr.sprite;
@@ -86,18 +99,18 @@ public class Delivery : MonoBehaviour
 
             currentTargetIndex = packages.IndexOf(collision.gameObject);
 
-            if (currentTargetIndex == -1)
-                Debug.Log("Picked pacakge is not in the list!");
-            if (addressOfHouse == null) 
-                Debug.LogError("addressOfHouse not assigned!");
+            //if (currentTargetIndex == -1)
+            //    Debug.Log("Picked pacakge is not in the list!");
+            //if (addressOfHouse == null) 
+            //    Debug.LogError("addressOfHouse not assigned!");
 
             var houseData = houseDelivery[currentTargetIndex].GetComponent<HouseData>();
             var catData = packages[currentTargetIndex].GetComponent<CatData>();
 
-            if (houseData == null) 
-                Debug.LogError("HouseData missing on " + houseData.name);
-            if (houseData.addressOfSprite == null)
-                Debug.LogError("addressOfSprite not set on " + houseData.name);
+            //if (houseData == null) 
+            //    Debug.LogError("HouseData missing on " + houseData.name);
+            //if (houseData.addressOfSprite == null)
+            //    Debug.LogError("addressOfSprite not set on " + houseData.name);
 
             sr.sprite = catData.CatInBike; // Change sprite to cat in bike when package is picked up
             addressOfHouse.sprite = houseData.addressOfSprite;
@@ -105,7 +118,15 @@ public class Delivery : MonoBehaviour
             Destroy(collision.gameObject);
             addressOfHouse.gameObject.SetActive(true);
             Countdown.gameObject.SetActive(true);
-            timeLeft = 60f;
+
+            startCell = roadTilemap.WorldToCell(transform.position);
+            Transform deliveryPoint = houseDelivery[currentTargetIndex].transform.Find("deliveryPoint");
+            goalCell = roadTilemap.WorldToCell(deliveryPoint.position);
+
+            pathCells = FindPathAStar(startCell, goalCell);
+            DrawPath(pathCells);
+
+            timeLeft = 20f;
         }
     }
 
@@ -120,10 +141,13 @@ public class Delivery : MonoBehaviour
                 Debug.Log("Delivered package!");
                 hasPackage = false;
                 currentTargetIndex = -1;
+                lineRenderer.positionCount = 0;
                 Countdown.gameObject.SetActive(false);
                 addressOfHouse.gameObject.SetActive(false);
                 timeLeft = 0f;
                 deliveries++;
+                money += 50;
+                MoneyCount.text = "$" + money.ToString();
                 DeliveryCount.text = deliveries.ToString();
 
                 // Stop particle effect
@@ -143,6 +167,109 @@ public class Delivery : MonoBehaviour
         {
             StartCoroutine(NotifyIncrease(seconds));
             timeLeft += seconds;
+        }
+    }
+
+    private bool IsWalkable(Vector3Int cell)
+    {
+        return roadTilemap.HasTile(cell);
+    }
+
+    private List<Vector3Int> FindPathAStar(Vector3Int start, Vector3Int goal)
+    {
+  
+        List<Vector3Int> openSet = new List<Vector3Int>();
+        HashSet<Vector3Int> closedSet = new HashSet<Vector3Int>();
+
+        Dictionary<Vector3Int, Vector3Int> cameFrom = new Dictionary<Vector3Int, Vector3Int>();
+        Dictionary<Vector3Int, int> gScore = new Dictionary<Vector3Int, int>();
+        Dictionary<Vector3Int, int> fScore = new Dictionary<Vector3Int, int>();
+
+        openSet.Add(start);
+        gScore[start] = 0;
+        fScore[start] = Heuristic(start, goal);
+
+        while (openSet.Count > 0)
+        {
+            // Get node with lowest fScore
+            Vector3Int current = openSet[0];
+            foreach (var node in openSet)
+            {
+                if (fScore.ContainsKey(node) && fScore[node] < fScore[current])
+                    current = node;
+            }
+
+            if (current == goal)
+                return ReconstructPath(cameFrom, current);
+
+            openSet.Remove(current);
+            closedSet.Add(current);
+
+            foreach (Vector3Int neighbor in GetNeighbors(current))
+            {
+                if (!IsWalkable(neighbor) || closedSet.Contains(neighbor))
+                    continue;
+
+                int tentativeG = gScore[current] + 1;
+
+                if (!openSet.Contains(neighbor))
+                    openSet.Add(neighbor);
+                else if (gScore.ContainsKey(neighbor) && tentativeG >= gScore[neighbor])
+                    continue;
+
+                cameFrom[neighbor] = current;
+                gScore[neighbor] = tentativeG;
+                fScore[neighbor] = tentativeG + Heuristic(neighbor, goal);
+            }
+        }
+
+        return new List<Vector3Int>(); // no path found
+    }
+
+    private int Heuristic(Vector3Int a, Vector3Int b)
+    {
+        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
+    }
+
+    private List<Vector3Int> GetNeighbors(Vector3Int cell)
+    {
+        return new List<Vector3Int>
+    {
+        cell + Vector3Int.up,
+        cell + Vector3Int.down,
+        cell + Vector3Int.left,
+        cell + Vector3Int.right
+    };
+    }
+
+    private List<Vector3Int> ReconstructPath(Dictionary<Vector3Int, Vector3Int> cameFrom, Vector3Int current)
+    {
+        List<Vector3Int> path = new List<Vector3Int>();
+        path.Add(current);
+
+        while (cameFrom.ContainsKey(current))
+        {
+            current = cameFrom[current];
+            path.Insert(0, current);
+        }
+
+        return path;
+    }
+
+    private void DrawPath(List<Vector3Int> path)
+    {
+        if (path == null || path.Count == 0)
+        {
+            lineRenderer.positionCount = 0;
+            return;
+        }
+
+        lineRenderer.positionCount = path.Count;
+
+        for (int i = 0; i < path.Count; i++)
+        {
+            Vector3 worldPos = roadTilemap.GetCellCenterWorld(path[i]);
+            lineRenderer.SetPosition(i, worldPos);
         }
     }
 
@@ -181,8 +308,11 @@ public class Delivery : MonoBehaviour
             {
                 hasPackage = false;
                 currentTargetIndex = -1;
+                lineRenderer.positionCount = 0;
+                LostCats += 1;
                 timeLeft = 0f; //clear state of timer
                 Countdown.gameObject.SetActive(false);
+                sr.sprite = originalBiker;
                 // cat escapes, not longer have package
             }
         }
@@ -192,5 +322,18 @@ public class Delivery : MonoBehaviour
     void Update()
     {
         UpdateTimer();
+        if (money >= 200)
+        {
+            GameStatus.gameObject.SetActive(true);
+            GameStatus.color = Color.darkGreen;
+            GameStatus.text = "YOU WIN!";
+            Time.timeScale = 0f;
+        } else if (LostCats == 6 && money < 200)
+        {
+            GameStatus.gameObject.SetActive(true);
+            GameStatus.color = Color.darkRed;
+            GameStatus.text = "GAME OVER";
+            Time.timeScale = 0f;
+        }
     }
 }
