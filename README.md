@@ -1,2 +1,2 @@
 # CatsForCash
-Delivery dash-style video game
+Delivery dash-style video game by Angel Disney Aragones
